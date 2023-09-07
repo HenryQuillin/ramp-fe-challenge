@@ -14,21 +14,19 @@ export function App() {
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
 
-  const transactions = useMemo(
-    () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
-    [paginatedTransactions, transactionsByEmployee]
-  )
+  const transactions = useMemo(() => paginatedTransactions?.data ?? transactionsByEmployee ?? null, [
+    paginatedTransactions,
+    transactionsByEmployee,
+  ])
 
   const loadAllTransactions = useCallback(async () => {
     setIsLoading(true)
-    transactionsByEmployeeUtils.invalidateData()
+    // transactionsByEmployeeUtils.invalidateData()
 
     await employeeUtils.fetchAll()
-
     setIsLoading(false)
 
     await paginatedTransactionsUtils.fetchAll()
-
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
 
   const loadTransactionsByEmployee = useCallback(
@@ -36,14 +34,14 @@ export function App() {
       paginatedTransactionsUtils.invalidateData()
       await transactionsByEmployeeUtils.fetchById(employeeId)
     },
-    [paginatedTransactionsUtils, transactionsByEmployeeUtils]
+    [paginatedTransactionsUtils, transactionsByEmployeeUtils, transactions]
   )
 
   useEffect(() => {
     if (employees === null && !employeeUtils.loading) {
       loadAllTransactions()
     }
-  }, [employeeUtils.loading, employees, loadAllTransactions])
+  }, [employeeUtils.loading, employees, loadAllTransactions, transactions])
 
   return (
     <Fragment>
@@ -66,12 +64,9 @@ export function App() {
             if (newValue === null) {
               return
             }
-            if (newValue.id !== ''){
-                await loadAllTransactions()
-            }
-            else{
-                await loadTransactionsByEmployee(newValue.id)
-            }
+            newValue.id === ''
+              ? await loadAllTransactions()
+              : await loadTransactionsByEmployee(newValue.id)
           }}
         />
 
@@ -80,10 +75,14 @@ export function App() {
         <div className="RampGrid">
           <Transactions transactions={transactions} />
 
-          {transactions !== null && paginatedTransactions !== null && paginatedTransactions.nextPage !== null && (
+          {transactions !== null && (
             <button
               className="RampButton"
-              disabled={paginatedTransactionsUtils.loading}
+              disabled={
+                paginatedTransactionsUtils.loading || paginatedTransactions?.nextPage != null
+                  ? false
+                  : true
+              }
               onClick={async () => {
                 await loadAllTransactions()
               }}
